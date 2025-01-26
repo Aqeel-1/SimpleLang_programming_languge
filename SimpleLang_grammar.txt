@@ -31,6 +31,11 @@ WhileStatement     -> "loop" "(" Expression ")" Statement
 ForStatement       -> "iterate" "(" Expression? ";" Expression? ";" Expression? ")" Statement
 ExpressionStatement -> Expression ";"
 
+# Comments
+Comment            -> SingleLineComment | MultiLineComment
+SingleLineComment  -> "!!" (~["\\n"])* "\\n"
+MultiLineComment   -> "(!" (~["!)"])* "!)"
+
 # Expressions
 Expression         -> ComparisonExpression
 ComparisonExpression -> AdditiveExpression (ComparisonOperator AdditiveExpression)*
