@@ -1,7 +1,7 @@
 # --- AST Node Classes ---
 class Program:
     def __init__(self, declarations):
-        self.declarations = declarations  # list of top-level declarations
+        self.declarations = declarations
 
     def __repr__(self):
         return f"Program(declarations={self.declarations})"

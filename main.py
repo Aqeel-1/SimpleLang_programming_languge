@@ -16,6 +16,10 @@ whole main() {
     whole result = add(5, 10);
     show(message + result);
     
+    check (1 >= 3) {
+    show(2);
+    }
+
 }
 """
 

@@ -32,7 +32,9 @@ ForStatement       -> "iterate" "(" Expression? ";" Expression? ";" Expression? 
 ExpressionStatement -> Expression ";"
 
 # Expressions
-Expression         -> AdditiveExpression
+Expression         -> ComparisonExpression
+ComparisonExpression -> AdditiveExpression (ComparisonOperator AdditiveExpression)*
+ComparisonOperator -> "==" | "!=" | "<" | ">" | "<=" | ">="
 AdditiveExpression -> Primary (("+" | "-") Primary)*
 Primary            -> NUMBER | STRING_LITERAL | IDENTIFIER | "(" Expression ")" | FunctionCall
 FunctionCall       -> IDENTIFIER "(" ArgumentList? ")"

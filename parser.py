@@ -78,52 +78,35 @@ class SimpleLangParser:
         """
         A top-level declaration can be:
         - A function declaration
-        - A variable declaration (though in many C-like languages, top-level variables might be static or global)
-        Here we assume only function declarations or global variable declarations are allowed.
+        - A variable declaration
         """
-        # Peek at the first token: must be a KEYWORD for type or something else
-        type_token = self._expect_type("KEYWORD")  # e.g., "whole" (C: int), "fraction", "text", etc.
-
-        name_token = self._expect_type("IDENTIFIER")  # function or variable name
-        # Next, decide if it's a function or a variable by peeking for '(' or something else
+        type_token = self._expect_type("KEYWORD")
+        name_token = self._expect_type("IDENTIFIER")
         if self._peek() and self._peek().value == "(":
-            # function declaration
             return self.parse_function_declaration(type_token.value, name_token.value)
         else:
-            # global variable declaration
-            # e.g. "whole x = 10;"
             return self.parse_global_variable_declaration(type_token.value, name_token.value)
 
     def parse_function_declaration(self, return_type, func_name):
         self._expect_value("(")
         parameters = []
         if self._peek() and self._peek().value != ")":
-            # parse parameter list
             parameters = self.parse_parameter_list()
         self._expect_value(")")
-
-        # parse the block
         body = self.parse_block_statement()
         return FunctionDeclaration(return_type, func_name, parameters, body)
 
     def parse_parameter_list(self):
-        """
-        parameter_list -> (type IDENTIFIER) ( "," type IDENTIFIER )*
-        """
         params = []
         while True:
             param_type_token = self._expect_type("KEYWORD")
             param_name_token = self._expect_type("IDENTIFIER")
             params.append(Parameter(param_type_token.value, param_name_token.value))
-
             if not self._match(","):
                 break
         return params
 
     def parse_block_statement(self):
-        """
-        block -> "{" statement* "}"
-        """
         self._expect_value("{")
         statements = []
         while self._peek() and self._peek().value != "}":
@@ -132,7 +115,6 @@ class SimpleLangParser:
         return BlockStatement(statements)
 
     def parse_global_variable_declaration(self, var_type, var_name):
-        # e.g. "whole x = 10;"
         initializer = None
         if self._match("="):
             initializer = self.parse_expression()
@@ -140,47 +122,23 @@ class SimpleLangParser:
         return VariableDeclaration(var_type, var_name, initializer)
 
     def parse_statement(self):
-        """
-        statement -> variable_declaration
-                   | return_statement
-                   | if_statement
-                   | while_statement
-                   | for_statement
-                   | block
-                   | expression_statement
-        """
         token = self._peek()
-
-        # check for type -> variable declaration
         if token.type == "KEYWORD" and token.value in ("whole", "fraction", "letter", "text"):
             return self.parse_variable_declaration()
-
-        # check for output -> return statement
         if token.type == "KEYWORD" and token.value == "output":
             return self.parse_return_statement()
-
-        # check for check -> if statement
         if token.type == "KEYWORD" and token.value == "check":
             return self.parse_if_statement()
-
-        # check for loop -> while statement
         if token.type == "KEYWORD" and token.value == "loop":
             return self.parse_while_statement()
-
-        # check for iterate -> for statement
         if token.type == "KEYWORD" and token.value == "iterate":
             return self.parse_for_statement()
-
-        # check for block
         if token.value == "{":
             return self.parse_block_statement()
-
-        # otherwise, expression statement
         return self.parse_expression_statement()
 
     def parse_variable_declaration(self):
-        # e.g. whole x = 5;
-        var_type_token = self._advance()  # KEYWORD
+        var_type_token = self._advance()
         name_token = self._expect_type("IDENTIFIER")
         initializer = None
         if self._match("="):
@@ -189,33 +147,27 @@ class SimpleLangParser:
         return VariableDeclaration(var_type_token.value, name_token.value, initializer)
 
     def parse_return_statement(self):
-        # e.g. output someExpression;
-        self._advance()  # consume 'output'
-        # expression can be optional (like "return;" in C), but for simplicity we require expression
+        self._advance()
         expr = None
-        current = self._peek()
-        if current and current.value != ";":
+        if self._peek() and self._peek().value != ";":
             expr = self.parse_expression()
         self._expect_value(";")
         return ReturnStatement(expr)
 
     def parse_if_statement(self):
-        # check "(" expr ")" statement (otherwise statement)?
-        self._advance()  # consume 'check'
+        self._advance()
         self._expect_value("(")
         condition = self.parse_expression()
         self._expect_value(")")
-
         then_branch = self.parse_statement()
         else_branch = None
         if self._peek() and self._peek().value == "otherwise":
-            self._advance()  # consume 'otherwise'
+            self._advance()
             else_branch = self.parse_statement()
         return IfStatement(condition, then_branch, else_branch)
 
     def parse_while_statement(self):
-        # loop "(" expr ")" statement
-        self._advance()  # consume 'loop'
+        self._advance()
         self._expect_value("(")
         condition = self.parse_expression()
         self._expect_value(")")
@@ -223,30 +175,20 @@ class SimpleLangParser:
         return WhileStatement(condition, body)
 
     def parse_for_statement(self):
-        # iterate "(" [ init ] ";" [ condition ] ";" [ incr ] ")" statement
-        self._advance()  # consume 'iterate'
+        self._advance()
         self._expect_value("(")
-
-        # init
         init = None
         if self._peek() and self._peek().value != ";":
-            # could be a variable declaration or an expression
-            # For simplicity, treat it as an expression statement
             init = self.parse_expression()
         self._expect_value(";")
-
-        # condition
         condition = None
         if self._peek() and self._peek().value != ";":
             condition = self.parse_expression()
         self._expect_value(";")
-
-        # increment
         increment = None
         if self._peek() and self._peek().value != ")":
             increment = self.parse_expression()
         self._expect_value(")")
-
         body = self.parse_statement()
         return ForStatement(init, condition, increment, body)
 
@@ -256,20 +198,25 @@ class SimpleLangParser:
         return ExpressionStatement(expr)
 
     def parse_expression(self):
-        """
-        For brevity, we handle only a small subset: binary +, - operators.
-        You can expand to handle all typical C-like precedence.
-        """
-        return self.parse_additive_expression()
+        return self.parse_comparison_expression()
+
+    def parse_comparison_expression(self):
+        expr = self.parse_additive_expression()
+        while True:
+            token = self._peek()
+            if token and token.value in {"==", "!=", "<", ">", "<=", ">="}:
+                op = self._advance().value
+                right = self.parse_additive_expression()
+                expr = BinaryExpression(expr, op, right)
+            else:
+                break
+        return expr
 
     def parse_additive_expression(self):
-        """
-        term (("+" | "-") term)*
-        """
         expr = self.parse_primary()
         while True:
             token = self._peek()
-            if token and token.value in ("+", "-"):
+            if token and token.value in {"+", "-"}:
                 op = self._advance().value
                 right = self.parse_primary()
                 expr = BinaryExpression(expr, op, right)
@@ -278,42 +225,27 @@ class SimpleLangParser:
         return expr
 
     def parse_primary(self):
-        """
-        primary -> NUMBER | STRING_LITERAL | IDENTIFIER | "(" expression ")" | function_call
-        We'll handle function_call inside parse_function_call if we detect an IDENTIFIER followed by '('.
-        """
         token = self._peek()
-
-        # Number
         if token.type == "NUMBER":
             self._advance()
             return NumberLiteral(token.value)
-
-        # String
         if token.type == "STRING_LITERAL":
             self._advance()
             return StringLiteral(token.value)
-
-        # Identifier or function call
         if token.type == "IDENTIFIER":
-            # Look ahead to see if next token is "(" => function call
             ident = token.value
             self._advance()
             if self._peek() and self._peek().value == "(":
                 return self.parse_function_call(ident)
             return Identifier(ident)
-
-        # Parenthesized expression
         if token.value == "(":
-            self._advance()  # consume "("
+            self._advance()
             expr = self.parse_expression()
             self._expect_value(")")
             return expr
-
         raise SimpleLangParserError(f"Unexpected token: {token}")
 
     def parse_function_call(self, func_name):
-        # We already consumed IDENTIFIER, next is "("
         self._expect_value("(")
         args = []
         if self._peek() and self._peek().value != ")":
