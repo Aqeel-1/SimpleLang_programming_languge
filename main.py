@@ -1,5 +1,5 @@
 from lexer import SimpleLangLexer, SimpleLangLexerError
-from parser import SimpleLangParser, SimpleLangParserError
+from parser_ import SimpleLangParser, SimpleLangParserError
 
 source_code = r"""
 whole add(whole a, whole b) {
